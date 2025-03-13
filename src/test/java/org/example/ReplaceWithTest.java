@@ -43,6 +43,7 @@ class ReplaceWithTest {
         Executors.newCachedThreadPool().submit(() -> {
             Thread.sleep(5000);
             log.info("1.1");
+            completableFuture.complete(null);
             return null;
         });
 
