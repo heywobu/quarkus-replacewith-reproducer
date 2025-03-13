@@ -3,9 +3,12 @@ package org.example;
 import io.quarkus.test.junit.QuarkusTest;
 import io.smallrye.mutiny.Uni;
 import org.jboss.logging.Logger;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
@@ -16,14 +19,26 @@ import static org.hamcrest.CoreMatchers.is;
 @QuarkusTest
 class ReplaceWithTest {
     private static final Logger log = Logger.getLogger(ReplaceWithTest.class);
+    private final List<String> orders = new ArrayList<>();
 
     @Test
-    void testHelloEndpoint() {
+    void notWorking() {
         awaitWithDeadline(stepOne()
-                .onFailure().invoke(throwable -> log.error("Error"))
                 .replaceWith(stepTwo())
                 .replaceWith(stepThree())
         );
+        log.info("orders: " + orders);
+        Assertions.assertEquals(List.of("1", "1.1", "2", "3"), orders);
+    }
+
+    @Test
+    void working() {
+        awaitWithDeadline(stepOne()
+                .call(this::stepTwo)
+                .call(this::stepThree)
+        );
+        log.info("orders: " + orders);
+        Assertions.assertEquals(List.of("1", "1.1", "2", "3"), orders);
     }
 
     void awaitWithDeadline(Uni<Void> uni) {
@@ -33,7 +48,7 @@ class ReplaceWithTest {
 
     Uni<Void> stepOne() {
         CompletableFuture<Void> future = getVoidCompletableFuture();
-        log.info("1");
+        orders.add("1");
         return Uni.createFrom().completionStage(future);
     }
 
@@ -42,7 +57,7 @@ class ReplaceWithTest {
 
         Executors.newCachedThreadPool().submit(() -> {
             Thread.sleep(5000);
-            log.info("1.1");
+            orders.add("1.1");
             completableFuture.complete(null);
             return null;
         });
@@ -51,12 +66,11 @@ class ReplaceWithTest {
     }
 
     Uni<Void> stepTwo() {
-        log.infof("2");
+        orders.add("2");
         return Uni.createFrom().voidItem();
     }
     Uni<Void> stepThree() {
-        log.infof("3");
+        orders.add("3");
         return Uni.createFrom().voidItem();
     }
-
 }
